@@ -62,7 +62,7 @@ def main(args):
     train_batchsize = 1
 
     # learning_rate = 1e-3  # 1e-3
-    optimizer = Adam()  # Adam(lr=learning_rate,beta_1=0.99)
+    optimizer = Adam(lr=args.learning_rate)  # Adam(lr=learning_rate,beta_1=0.99)
 
     model.compile(
         optimizer, dummy_loss
@@ -157,6 +157,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_image_path", default="images/train/", type=str)
     parser.add_argument("--save_interval", default=50, type=int)
     parser.add_argument("--resume", nargs=2, default=[None, 0], help="Model name and iteration number")
+    parser.add_argument("--learning_rate", default=1e-3, type=float)
 
     args = parser.parse_args()
     main(args)
