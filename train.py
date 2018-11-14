@@ -1,15 +1,22 @@
-from loss import dummy_loss
+#!/usr/bin/env python
 
-from keras.optimizers import Adam
-from keras.preprocessing.image import ImageDataGenerator
-
-from scipy.misc import imsave
-import time
-import numpy as np
+# Standard imports
 import argparse
 import os
+import time
 
+# Third party imports
+from keras.optimizers import Adam
+from keras.preprocessing.image import ImageDataGenerator
+from scipy.misc import imsave
+import numpy as np
+
+# Local imports
+from loss import dummy_loss
 import nets
+
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "images", "output")
+STYLE_DIR = os.path.join(os.path.dirname(__file__), "images", "style")
 
 
 def save_img(i, x, style, is_val=False):
@@ -17,16 +24,15 @@ def save_img(i, x, style, is_val=False):
     img = x  # deprocess_image(x)
     if is_val:
         # img = ndimage.median_filter(img, 3)
-
-        fname = "images/output/%s_%d_val.png" % (style, i)
+        fname = os.path.join(OUTPUT_DIR, f"{style}_{i}_val.png")
     else:
-        fname = "images/output/%s_%d.png" % (style, i)
+        fname = os.path.join(OUTPUT_DIR, f"{style}_{i}.png")
     imsave(fname, img)
     print("Image saved as", fname)
 
 
 def get_style_img_path(style):
-    return "images/style/" + style + ".jpg"
+    return os.path.join(STYLE_DIR, f"{style}.jpg")
 
 
 def main(args):
@@ -61,8 +67,7 @@ def main(args):
 
     train_batchsize = 1
 
-    # learning_rate = 1e-3  # 1e-3
-    optimizer = Adam(lr=args.learning_rate)  # Adam(lr=learning_rate,beta_1=0.99)
+    optimizer = Adam(lr=args.learning_rate)
 
     model.compile(
         optimizer, dummy_loss
@@ -127,7 +132,10 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Real-time style transfer")
+    parser = argparse.ArgumentParser(
+        description="Training for real-time style transfer",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
 
     parser.add_argument(
         "--style",
@@ -149,15 +157,54 @@ if __name__ == "__main__":
         "--tv_weight",
         default=1e-6,
         type=float,
-        help="weight of total variation regularization according to the paper to be set between 10e-4 and 10e-6.",
+        help="""Weight of total variation regularization according to the paper
+        to be set between 10e-4 and 10e-6.""",
     )
-    parser.add_argument("--content_weight", default=1.0, type=float)
-    parser.add_argument("--style_weight", default=4.0, type=float)
-    parser.add_argument("--image_size", default=256, type=int)
-    parser.add_argument("--train_image_path", default="images/train/", type=str)
-    parser.add_argument("--save_interval", default=50, type=int)
-    parser.add_argument("--resume", nargs=2, default=[None, 0], help="Model name and iteration number")
-    parser.add_argument("--learning_rate", default=1e-3, type=float)
+    parser.add_argument(
+        "--content_weight",
+        default=1.0,
+        type=float,
+        metavar="float",
+        help="The weight to assign to the content image.",
+    )
+    parser.add_argument(
+        "--style_weight",
+        default=4.0,
+        type=float,
+        metavar="float",
+        help="The weight to assign to the style image.",
+    )
+    parser.add_argument(
+        "--image_size",
+        default=256,
+        type=int,
+        metavar="int",
+        help="""The size of the images on which to train. Each image in
+        train_image_path will be resized to a square with this dimension.""",
+    )
+    parser.add_argument(
+        "--train_image_path",
+        default="images/train/",
+        type=str,
+        help="""The path to the images on which to train. The images must be in
+        a subdirectory under this path.""",
+    )
+    parser.add_argument(
+        "--save_interval",
+        default=50,
+        type=int,
+        metavar="int",
+        help="The interval at which to save the model.",
+    )
+    parser.add_argument(
+        "--resume",
+        nargs=2,
+        default=[None, 0],
+        help="""Saved model filename and iteration number at which to resume
+        training. Allows training to be stopped and restarted at a later
+        time.""",
+    )
+    parser.add_argument("--learning_rate", default=1e-3, type=float, help="")
 
     args = parser.parse_args()
     main(args)

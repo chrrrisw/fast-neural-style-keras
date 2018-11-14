@@ -1,17 +1,32 @@
+#!/usr/bin/env python
+
+# Standard imports
+import argparse
+import os
+import time
+
+# Third party imports
 from keras.optimizers import Adam
-from loss import dummy_loss
 from scipy.misc import imsave
 from scipy.ndimage.filters import median_filter
 from skimage import color
-import argparse
-import nets
 import numpy as np
-import time
 
-from img_util import (
-    preprocess_reflect_image,
-    crop_image,
-)
+# Local imports
+from img_util import preprocess_reflect_image, crop_image
+from loss import dummy_loss
+import nets
+
+PRETRAINED_DIR = os.path.join(os.path.dirname(__file__), "pretrained")
+
+
+def get_pretrained():
+    print("The following pre-trained networks are available:")
+    model_files = [mf for mf in os.listdir(PRETRAINED_DIR) if mf.endswith(".h5")]
+    for i, mf in enumerate(model_files):
+        print(f"{i:4d}: {mf}")
+    result = input("Enter model number:")
+    return model_files[int(result)]
 
 
 # from 6o6o's fork. https://github.com/6o6o/chainer-fast-neuralstyle/blob/master/generate.py
@@ -28,6 +43,7 @@ def original_colors(original, stylized, original_color):
 
 
 def blend(original, stylized, alpha):
+    """Simple alpha blend of original with the styled output."""
     return alpha * original + (1 - alpha) * stylized
 
 
@@ -46,7 +62,11 @@ def median_filter_all_colours(im_small, window_size):
 
 
 def main(args):
-    style = args.style
+    if args.style is not None:
+        style = args.style
+    else:
+        style = get_pretrained()
+
     # img_width = img_height =  args.image_size
     output_file = args.output
     input_file = args.input
@@ -66,7 +86,7 @@ def main(args):
         Adam(), dummy_loss
     )  # Dummy loss since we are learning from regularizes
 
-    model.load_weights("pretrained/" + style + "_weights.h5", by_name=False)
+    model.load_weights(os.path.join(PRETRAINED_DIR, style), by_name=False)
 
     t1 = time.time()
     y = net.predict(x)[0]
@@ -88,18 +108,30 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Real-time style transfer")
+
+    parser = argparse.ArgumentParser(
+        description="Real-time style transfer",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    parser.add_argument(
+        "--input",
+        "-i",
+        default=None,
+        required=True,
+        type=str,
+        help="The content image filename.",
+    )
 
     parser.add_argument(
         "--style",
         "-s",
         type=str,
-        required=True,
-        help="style image file name without extension",
-    )
-
-    parser.add_argument(
-        "--input", "-i", default=None, required=True, type=str, help="input file name"
+        default=None,
+        metavar="FILENAME",
+        help="""Style image filename, assumes that the file exists in the
+        ./pretrained directory. If no style is specified, you will be asked
+        to choose from a list.""",
     )
 
     parser.add_argument(
@@ -116,7 +148,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--blend", "-b", default=0, type=float, help="0~1 for blend with original image"
+        "-b",
+        "--blend",
+        default=0,
+        type=float,
+        help="Blend with original image. This value is the alpha value for the original [0-1]",
     )
 
     parser.add_argument(
@@ -125,4 +161,5 @@ if __name__ == "__main__":
     parser.add_argument("--image_size", default=256, type=int)
 
     args = parser.parse_args()
+
     main(args)
